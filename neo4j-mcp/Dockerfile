@@ -20,6 +20,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -C cmd/neo4j-mcp -a -installsuffix cgo \
 # Runtime stage
 FROM python:3.13-slim
 
+RUN apt update && apt install -y curl
+
 WORKDIR /app
 
 # Copy binary from builder
