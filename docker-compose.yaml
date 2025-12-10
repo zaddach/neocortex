@@ -9,6 +9,88 @@ services:
       - OLLAMA_API_URL=http://ollama:11434
       - LOG_LEVEL=debug
       - WEBUI_SECRET_KEY=your_secret_key_here  # Add this to prevent logouts after updates
+      - DOCLING_SERVER_URL=http://docling:5001
+      - CONTENT_EXTRACTION_ENGINE=docling
+      - 'DOCLING_PARAMS={
+          "do_ocr": true,
+          "ocr_engine": "tesseract",
+          "ocr_lang": ["eng", "fra", "deu", "spa"],
+          "force_ocr": false,
+          "pdf_backend": "dlparse_v4",
+          "table_mode": "accurate",
+          "do_picture_description": true,
+          "picture_description_mode": "api",
+          "picture_description_api_model": "gpt-4o",
+          "vlm_pipeline_model_api": "openai://gpt-4o"
+        }'
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - RAG_TOP_K=3
+      #- VECTOR_DB=pgvector
+      #- PGVECTOR_DB_URL=postgres://postgres:example@postgres:5432/postgres
+      - 'TOOLSERVER_CONNECTIONS=[
+          {
+            "type": "openapi",
+            "url": "http://neo4j-mcp:80",
+            "spec_type": "url",
+            "spec": "",
+            "path": "openapi.json",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "neo4j"
+              "description": "A tool to query the Neo4j graph database for relationships and insights."
+            }
+          },
+          {
+            "type": "openapi",
+            "url": "http://pyghidra-mcp:80",
+            "spec_type": "url",
+            "spec": "",
+            "path": "openapi.json",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "ghidra"
+              "description": "A tool to analyze and extract information from binary files using PyGhidra."
+            }
+          },
+          {
+            "type": "openapi",
+            "url": "http://angr-mcp:80",
+            "spec_type": "url",
+            "spec": "",
+            "path": "openapi.json",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "angr"
+              "description": "A tool to perform binary analysis and symbolic execution using the Angr framework."
+            }
+          },
+          {
+            "type": "openapi",
+            "url": "http://triage-mcp:80",
+            "spec_type": "url",
+            "spec": "",
+            "path": "openapi.json",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "triage"
+              "description": "A tool to analyze and classify malware samples using the Triage framework."
+            }
+          }
+        ]'
+
     volumes:
       - data:/data
       - models:/models
@@ -33,7 +115,18 @@ services:
         condition: service_started
       ollama:
         condition: service_started
+      triage-mcp:
+        condition: service_started
+      postgres:
+        condition: service_started
     restart: unless-stopped
+
+  postgres:
+    image: postgres
+    restart: always
+    shm_size: '128mb'
+    environment:
+      POSTGRES_PASSWORD: example
     
   ollama:
     container_name: ollama
@@ -143,7 +236,7 @@ services:
       retries: 30
 
   angr-mcp:
-    image: ghcr.io/zaddach/angrmcp:release
+    build: ./angr-mcp
     container_name: angr-mcp
     ports:
       - "8005:80"
@@ -156,6 +249,52 @@ services:
     #   timeout: 3s
     #   retries: 30
 
+  triage-mcp:
+    image: quay.io/docling-project/docling-serve-cu124
+    
+
+
+
+    build: ./triage-mcp
+    container_name: triage-mcp
+    ports:
+      - "8007:80"
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 30
+
+  # static-malware-analyzer:
+  #   build: https://github.com/grchanduvardhan/Static-Malware-PE-and-DLL-Analyzer
+  #   container_name: static-malware-analyzer
+  #   ports:
+  #     - "8006:5000"
+  #   networks:
+  #     - ollama-net
+  #   restart: unless-stopped
+
+
+  docling:
+    image: quay.io/docling-project/docling-serve-cu124
+    container_name: docling
+    ports:
+      - "5001:5001"
+    environment:
+      - DOCLING_SERVE_ENABLE_UI=true
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                capabilities: [gpu]
+                count: all
 
 volumes:
   data:
