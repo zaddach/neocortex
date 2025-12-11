@@ -26,8 +26,8 @@ services:
       - RAG_EMBEDDING_ENGINE=ollama
       - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
       - RAG_TOP_K=3
-      #- VECTOR_DB=pgvector
-      #- PGVECTOR_DB_URL=postgres://postgres:example@postgres:5432/postgres
+      - VECTOR_DB=pgvector
+      - PGVECTOR_DB_URL=postgres://rag:rag_password@postgres:5432/rag_db
       - 'TOOLSERVER_CONNECTIONS=[
           {
             "type": "openapi",
@@ -88,6 +88,36 @@ services:
               "name": "triage"
               "description": "A tool to analyze and classify malware samples using the Triage framework."
             }
+          },
+          {
+            "type": "openapi",
+            "url": "http://mitre-attack-mcp:80",
+            "spec_type": "url",
+            "spec": "",
+            "path": "openapi.json",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "mitre-attack"
+              "description": "A tool to access and query the MITRE ATT&CK knowledge base."
+            }
+          },
+          {
+            "type": "mcp",
+            "url": "https://learn.microsoft.com/api/mcp",
+            "spec_type": "url",
+            "spec": "",
+            "path": "",
+            "auth-type": "none",
+            "key": "",
+            "config": {"enable": true},
+            "info": {
+              "id": "",
+              "name": "microsoft-learn"
+              "description": "A tool to access Microsoft Learn documentation and resources."
+            }
           }
         ]'
 
@@ -119,14 +149,19 @@ services:
         condition: service_started
       postgres:
         condition: service_started
+      mitre-attack-mcp:
+        condition: service_started
     restart: unless-stopped
 
   postgres:
-    image: postgres
+    image: ankane/pgvector
+    container_name: postgres
     restart: always
     shm_size: '128mb'
     environment:
-      POSTGRES_PASSWORD: example
+      - POSTGRES_PASSWORD=example
+    volumes:
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     
   ollama:
     container_name: ollama
@@ -295,6 +330,36 @@ services:
               - driver: nvidia
                 capabilities: [gpu]
                 count: all
+
+  mitre-attack-mcp:
+    build: ./mitre-attack-mcp
+    container_name: mitre-attack-mcp
+    ports:
+      - "8008:80"
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 30
+
+  postgres-mcp:
+    build: ./postgres-mcp
+    container_name: postgres-mcp
+    environment:
+      - DATABASE_URI=postgresql+psycopg2://openwebui:openwebui_password@postgres:5432/openwebui_db
+    ports:
+      - "8009:80"
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 30
 
 volumes:
   data:
