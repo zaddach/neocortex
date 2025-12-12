@@ -27,7 +27,7 @@ services:
       - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
       - RAG_TOP_K=3
       - VECTOR_DB=pgvector
-      - PGVECTOR_DB_URL=postgres://rag:rag_password@postgres:5432/rag_db
+      - PGVECTOR_DB_URL=postgresql://rag:rag_password@postgres:5432/rag_db
       - 'TOOLSERVER_CONNECTIONS=[
           {
             "type": "openapi",
@@ -151,10 +151,12 @@ services:
         condition: service_started
       mitre-attack-mcp:
         condition: service_started
+      postgres-mcp:
+        condition: service_started
     restart: unless-stopped
 
   postgres:
-    image: ankane/pgvector
+    image: pgvector/pgvector:pg18-trixie
     container_name: postgres
     restart: always
     shm_size: '128mb'
@@ -162,6 +164,8 @@ services:
       - POSTGRES_PASSWORD=example
     volumes:
       - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - ollama-net
     
   ollama:
     container_name: ollama
@@ -349,7 +353,7 @@ services:
     build: ./postgres-mcp
     container_name: postgres-mcp
     environment:
-      - DATABASE_URI=postgresql+psycopg2://openwebui:openwebui_password@postgres:5432/openwebui_db
+      - DATABASE_URI=postgresql://openwebui:openwebui_password@postgres:5432/openwebui_db
     ports:
       - "8009:80"
     networks:
@@ -360,6 +364,9 @@ services:
     #   interval: 30s
     #   timeout: 3s
     #   retries: 30
+    depends_on:
+      postgres:
+        condition: service_started
 
 volumes:
   data:
