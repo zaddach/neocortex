@@ -29,105 +29,112 @@ services:
       - VECTOR_DB=pgvector
       - PGVECTOR_DB_URL=postgresql://rag:rag_password@postgres:5432/rag_db
       - 'TOOL_SERVER_CONNECTIONS=[
-  {
-    "type": "openapi",
-    "url": "http://neo4j-mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "neo4j",
-      "description": ""
-    }
-  },
-  {
-    "type": "openapi",
-    "url": "http://angr-mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "angr",
-      "description": ""
-    }
-  },
-  {
-    "type": "mcp",
-    "url": "https://learn.microsoft.com/api/mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "microsoft-learn",
-      "name": "microsoft-learn",
-      "description": ""
-    }
-  },
-  {
-    "type": "openapi",
-    "url": "http://mitre-attack-mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "mitre-attack",
-      "description": ""
-    }
-  },
-  {
-    "type": "openapi",
-    "url": "http://postgres-mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "postgres",
-      "description": ""
-    }
-  },
-  {
-    "type": "openapi",
-    "url": "http://triage-mcp:5001",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "triage",
-      "description": ""
-    }
-  },
-  {
-    "type": "openapi",
-    "url": "http://pyghidra-mcp",
-    "spec_type": "url",
-    "spec": "",
-    "path": "openapi.json",
-    "auth_type": "none",
-    "key": "",
-    "info": {
-      "id": "",
-      "name": "ghidra",
-      "description": ""
-    }
-  }
-]'
+        {
+          "type": "openapi",
+          "url": "http://neo4j-mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "neo4j",
+            "description": "A tool to query the Neo4j graph database for relationships and insights."
+          }
+        },
+        {
+          "type": "openapi",
+          "url": "http://angr-mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "angr",
+            "description": "A tool to perform binary analysis and symbolic execution using the Angr framework."
+          }
+        },
+        {
+          "type": "mcp",
+          "url": "https://learn.microsoft.com/api/mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "microsoft-learn",
+            "name": "microsoft-learn",
+            "description": "A tool to access Microsoft Learn documentation and resources."
+          }
+        },
+        {
+          "type": "openapi",
+          "url": "http://mitre-attack-mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "mitre-attack",
+            "description": "A tool to access and query the MITRE ATT&CK knowledge base."
+          }
+        },
+        {
+          "type": "openapi",
+          "url": "http://postgres-mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "postgres",
+            "description": "A tool to query PostgreSQL databases."
+          }
+        },
+        {
+          "type": "openapi",
+          "url": "http://triage-mcp:5001",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "triage",
+            "description": "A tool to analyze and classify malware samples using the Triage framework."
+          }
+        },
+        {
+          "type": "openapi",
+          "url": "http://pyghidra-mcp",
+          "spec_type": "url",
+          "spec": "",
+          "path": "openapi.json",
+          "auth_type": "none",
+          "key": "",
+          "config": {"enable": true},
+          "info": {
+            "id": "",
+            "name": "ghidra",
+            "description": "A tool to perform reverse engineering and binary analysis using the Ghidra framework."
+          }
+        }
+      ]'
 
     volumes:
       - data:/data
@@ -375,6 +382,18 @@ services:
     depends_on:
       postgres:
         condition: service_started
+
+  copilot-api:
+    build: https://github.com/ericc-ch/copilot-api.git
+    container_name: copilot-api
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    env_file:
+      - path: ./copilot.env
+        required: false
+    ports:
+      - "4141:4141"
 
 volumes:
   data:
