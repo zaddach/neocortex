@@ -9,7 +9,9 @@ ENV UV_LINK_MODE=copy
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-RUN pip install uv && \
+RUN apt-get update && \
+    apt-get install -y gcc && \
+    pip install uv && \
     uv venv /app/.venv && \
     uv pip install --python /app/.venv/bin/python \
         mcpo \

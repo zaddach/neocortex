@@ -28,98 +28,106 @@ services:
       - RAG_TOP_K=3
       - VECTOR_DB=pgvector
       - PGVECTOR_DB_URL=postgresql://rag:rag_password@postgres:5432/rag_db
-      - 'TOOLSERVER_CONNECTIONS=[
-          {
-            "type": "openapi",
-            "url": "http://neo4j-mcp:80",
-            "spec_type": "url",
-            "spec": "",
-            "path": "openapi.json",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "neo4j"
-              "description": "A tool to query the Neo4j graph database for relationships and insights."
-            }
-          },
-          {
-            "type": "openapi",
-            "url": "http://pyghidra-mcp:80",
-            "spec_type": "url",
-            "spec": "",
-            "path": "openapi.json",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "ghidra"
-              "description": "A tool to analyze and extract information from binary files using PyGhidra."
-            }
-          },
-          {
-            "type": "openapi",
-            "url": "http://angr-mcp:80",
-            "spec_type": "url",
-            "spec": "",
-            "path": "openapi.json",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "angr"
-              "description": "A tool to perform binary analysis and symbolic execution using the Angr framework."
-            }
-          },
-          {
-            "type": "openapi",
-            "url": "http://triage-mcp:80",
-            "spec_type": "url",
-            "spec": "",
-            "path": "openapi.json",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "triage"
-              "description": "A tool to analyze and classify malware samples using the Triage framework."
-            }
-          },
-          {
-            "type": "openapi",
-            "url": "http://mitre-attack-mcp:80",
-            "spec_type": "url",
-            "spec": "",
-            "path": "openapi.json",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "mitre-attack"
-              "description": "A tool to access and query the MITRE ATT&CK knowledge base."
-            }
-          },
-          {
-            "type": "mcp",
-            "url": "https://learn.microsoft.com/api/mcp",
-            "spec_type": "url",
-            "spec": "",
-            "path": "",
-            "auth-type": "none",
-            "key": "",
-            "config": {"enable": true},
-            "info": {
-              "id": "",
-              "name": "microsoft-learn"
-              "description": "A tool to access Microsoft Learn documentation and resources."
-            }
-          }
-        ]'
+      - 'TOOL_SERVER_CONNECTIONS=[
+  {
+    "type": "openapi",
+    "url": "http://neo4j-mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "neo4j",
+      "description": ""
+    }
+  },
+  {
+    "type": "openapi",
+    "url": "http://angr-mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "angr",
+      "description": ""
+    }
+  },
+  {
+    "type": "mcp",
+    "url": "https://learn.microsoft.com/api/mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "microsoft-learn",
+      "name": "microsoft-learn",
+      "description": ""
+    }
+  },
+  {
+    "type": "openapi",
+    "url": "http://mitre-attack-mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "mitre-attack",
+      "description": ""
+    }
+  },
+  {
+    "type": "openapi",
+    "url": "http://postgres-mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "postgres",
+      "description": ""
+    }
+  },
+  {
+    "type": "openapi",
+    "url": "http://triage-mcp:5001",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "triage",
+      "description": ""
+    }
+  },
+  {
+    "type": "openapi",
+    "url": "http://pyghidra-mcp",
+    "spec_type": "url",
+    "spec": "",
+    "path": "openapi.json",
+    "auth_type": "none",
+    "key": "",
+    "info": {
+      "id": "",
+      "name": "ghidra",
+      "description": ""
+    }
+  }
+]'
 
     volumes:
       - data:/data
