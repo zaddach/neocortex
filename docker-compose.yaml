@@ -282,6 +282,8 @@ services:
       - "8003:80"
     networks:
       - ollama-net
+    volumes:
+      - malware:/malware:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
@@ -302,6 +304,8 @@ services:
     #   interval: 30s
     #   timeout: 3s
     #   retries: 30
+    volumes:
+      - malware:/malware:ro
 
   triage-mcp:
     image: quay.io/docling-project/docling-serve-cu124
@@ -321,6 +325,8 @@ services:
     #   interval: 30s
     #   timeout: 3s
     #   retries: 30
+    volumes:
+      - malware:/malware:ro
 
   # static-malware-analyzer:
   #   build: https://github.com/grchanduvardhan/Static-Malware-PE-and-DLL-Analyzer
@@ -395,11 +401,25 @@ services:
     ports:
       - "4141:4141"
 
+  filebrowser:
+    image: hurlenko/filebrowser
+    container_name: filebrowser
+    volumes:
+      - malware:/data:rw
+      - filebrowser_config:/config:rw
+    environment:
+      - FB_BASE_URL=/filebrowser
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+
 volumes:
   data:
   models:
   ollama:
   open-webui:
+  malware:
+  filebrowser_config:
 networks:
   ollama-net:
     driver: bridge
