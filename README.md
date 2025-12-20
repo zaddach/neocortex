@@ -18,3 +18,4 @@ Once you've done that, click on your user in the top right corner, choose "Admin
 - https://medium.com/@richard.meyer596/multi-source-rag-with-hybrid-search-and-re-ranking-in-openwebui-8762f1bdc2c6
 - [FatalSec: Build an AI-Powered Reverse Engineering Lab with Ghidra](https://www.youtube.com/watch?v=WOsVlzEXxJk&pp=ygUKZ2hpZHJhIG1jcA%3D%3D)
 - [OALabs: Automated AI Reverse Engineering with MCP for IDA and Ghidra (Live VIBE RE)](https://www.youtube.com/watch?v=iFxNuk3kxhk)
+- [Raptor](https://github.com/gadievron/raptor)
