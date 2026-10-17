@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "angr": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp/angr/"
+    },
+    "ghidra": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp/ghidra/"
+    },
+    "cognee": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp/cognee/"
+    },
+    "hindsight": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp/hindsight/neocortex/"
+    }
+  }
+}

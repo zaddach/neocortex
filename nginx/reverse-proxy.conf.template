@@ -1,0 +1,131 @@
+# Rendered by the nginx image's envsubst step; only ${NEOCORTEX_PORT} is
+# substituted, nginx's own $variables are left alone.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      '';
+}
+
+# Docker's embedded DNS. Upstreams are referenced through variables so nginx
+# resolves them per request and starts even when some services are down.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# Uploads (samples, documents) can be large.
+client_max_body_size 0;
+
+# Landing page with links to everything below, plus the file browser, which
+# is built to live under /filebrowser.
+server {
+    listen ${NEOCORTEX_PORT} default_server;
+    server_name localhost;
+
+    root /usr/share/nginx/html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /filebrowser/ {
+        set $upstream filebrowser:8080;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+
+    # MCP gateway: /mcp/angr/, /mcp/ghidra/, /mcp/cognee/, /mcp/hindsight/<bank>/.
+    # Plain localhost (not a *.localhost name) so the MCP servers' Host-header
+    # guards, which allow localhost:* by default, accept the forwarded request.
+    location /mcp/ {
+        set $upstream mcp-gateway:80;
+        rewrite ^/mcp/(.*)$ /$1 break;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name files.localhost;
+
+    location = / {
+        return 302 /filebrowser/;
+    }
+
+    location /filebrowser/ {
+        set $upstream filebrowser:8080;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+# Cognee UI and API on one origin: the UI calls the backend at
+# <COGNEE_BACKEND_URL>/api/v1/..., while its own Next.js routes live under
+# /api/<name> (never /api/v1), so the two never collide.
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name cognee.localhost;
+
+    location /api/v1/ {
+        set $upstream cognee:8000;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+
+    location = /health {
+        set $upstream cognee:8000;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+
+    location / {
+        set $upstream cognee-ui:3000;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+# Cognee REST API on its own (Swagger UI at /docs).
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name cognee-api.localhost;
+
+    location / {
+        set $upstream cognee:8000;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+# Hindsight control plane (web UI).
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name hindsight.localhost;
+
+    location / {
+        set $upstream hindsight:9999;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+# Hindsight REST API (Swagger UI at /docs).
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name hindsight-api.localhost;
+
+    location / {
+        set $upstream hindsight:8888;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name ollama.localhost;
+
+    location / {
+        set $upstream ollama:11434;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}

@@ -1,187 +1,24 @@
 # https://gist.githubusercontent.com/usrbinkat/de44facc683f954bf0cca6c87e2f9f88/raw/0402e8441de57ccd8b00fe0db8ad40cae7d5fdb8/docker-compose.yaml
+# Settings shared by the cognee API server and cognee-mcp, which operate on
+# the same storage volumes.
+x-cognee-env: &cognee-env
+  ENV: local
+  SYSTEM_ROOT_DIRECTORY: /cognee-storage/system
+  DATA_ROOT_DIRECTORY: /cognee-storage/data
+  DEFAULT_USER_PASSWORD: ${COGNEE_DEFAULT_USER_PASSWORD:-default_password}
+  LLM_PROVIDER: ollama
+  LLM_MODEL: qwen3.5:9b
+  LLM_ENDPOINT: http://ollama:11434
+  LLM_API_KEY: ollama
+  # qwen3.5 is a reasoning model; without this every call spends hundreds of
+  # tokens thinking first (the API equivalent of `ollama run --think=false`).
+  LLM_ARGS: '{"think": false}'
+  EMBEDDING_PROVIDER: ollama
+  EMBEDDING_MODEL: nomic-embed-text:latest
+  EMBEDDING_ENDPOINT: http://ollama:11434/api/embed
+  EMBEDDING_DIMENSIONS: "768"
+
 services:
-  open-webui:
-    container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:main
-    environment:
-      - MODEL_DOWNLOAD_DIR=/models
-      - OLLAMA_API_BASE_URL=http://ollama:11434
-      - OLLAMA_API_URL=http://ollama:11434
-      - LOG_LEVEL=debug
-      - WEBUI_SECRET_KEY=your_secret_key_here  # Add this to prevent logouts after updates
-      - DOCLING_SERVER_URL=http://docling:5001
-      - CONTENT_EXTRACTION_ENGINE=docling
-      - 'DOCLING_PARAMS={
-          "do_ocr": true,
-          "ocr_engine": "tesseract",
-          "ocr_lang": ["eng", "fra", "deu", "spa"],
-          "force_ocr": false,
-          "pdf_backend": "dlparse_v4",
-          "table_mode": "accurate",
-          "do_picture_description": true,
-          "picture_description_mode": "api",
-          "picture_description_api_model": "gpt-4o",
-          "vlm_pipeline_model_api": "openai://gpt-4o"
-        }'
-      - RAG_EMBEDDING_ENGINE=ollama
-      - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-      - RAG_TOP_K=3
-      - VECTOR_DB=pgvector
-      - PGVECTOR_DB_URL=postgresql://rag:rag_password@postgres:5432/rag_db
-      - 'TOOL_SERVER_CONNECTIONS=[
-        {
-          "type": "openapi",
-          "url": "http://neo4j-mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "neo4j",
-            "description": "A tool to query the Neo4j graph database for relationships and insights."
-          }
-        },
-        {
-          "type": "openapi",
-          "url": "http://angr-mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "angr",
-            "description": "A tool to perform binary analysis and symbolic execution using the Angr framework."
-          }
-        },
-        {
-          "type": "mcp",
-          "url": "https://learn.microsoft.com/api/mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "microsoft-learn",
-            "name": "microsoft-learn",
-            "description": "A tool to access Microsoft Learn documentation and resources."
-          }
-        },
-        {
-          "type": "openapi",
-          "url": "http://mitre-attack-mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "mitre-attack",
-            "description": "A tool to access and query the MITRE ATT&CK knowledge base."
-          }
-        },
-        {
-          "type": "openapi",
-          "url": "http://postgres-mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "postgres",
-            "description": "A tool to query PostgreSQL databases."
-          }
-        },
-        {
-          "type": "openapi",
-          "url": "http://triage-mcp:5001",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "triage",
-            "description": "A tool to analyze and classify malware samples using the Triage framework."
-          }
-        },
-        {
-          "type": "openapi",
-          "url": "http://pyghidra-mcp",
-          "spec_type": "url",
-          "spec": "",
-          "path": "openapi.json",
-          "auth_type": "none",
-          "key": "",
-          "config": {"enable": true},
-          "info": {
-            "id": "",
-            "name": "ghidra",
-            "description": "A tool to perform reverse engineering and binary analysis using the Ghidra framework."
-          }
-        }
-      ]'
-
-    volumes:
-      - data:/data
-      - models:/models
-      - open-webui:/app/backend/data  # Corrected path based on documentation
-    ports:
-      - "8080:8080"
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "2"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - ollama-net
-    depends_on:
-      neo4j-mcp:
-        condition: service_healthy
-      pyghidra-mcp:
-        condition: service_healthy
-      angr-mcp:
-        condition: service_started
-      ollama:
-        condition: service_started
-      triage-mcp:
-        condition: service_started
-      postgres:
-        condition: service_started
-      mitre-attack-mcp:
-        condition: service_started
-      postgres-mcp:
-        condition: service_started
-    restart: unless-stopped
-
-  postgres:
-    image: pgvector/pgvector:pg18-trixie
-    container_name: postgres
-    restart: always
-    shm_size: '128mb'
-    environment:
-      - POSTGRES_PASSWORD=example
-    volumes:
-      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-    networks:
-      - ollama-net
-    
   ollama:
     container_name: ollama
     image: ollama/ollama:latest
@@ -200,9 +37,8 @@ services:
               count: all
     volumes:
       - ollama:/root/.ollama
-      - models:/models
-    ports:
-      - "11434:11434"
+    # No host port: the host may run its own Ollama on 11434. Reach this one
+    # through the reverse proxy at http://ollama.localhost:8080.
     logging:
       driver: json-file
       options:
@@ -216,210 +52,175 @@ services:
     #   interval: 30s
     #   timeout: 3s
     #   retries: 30
-    
-  watchtower:
-    image: ghcr.io/nicholas-fedor/watchtower:latest
-    container_name: watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 open-webui  # Check for updates every 5 minutes
-    depends_on:
-      - open-webui
-    networks:
-      - ollama-net
-    restart: unless-stopped
-  
-  neo4j:
-    image: neo4j
-    container_name: neo4j
+
+  ollama-model-init:
+    image: ollama/ollama:latest
+    container_name: ollama-model-init
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until ollama pull qwen3.5:9b; do echo "waiting for ollama..."; sleep 2; done
+        until ollama pull nomic-embed-text; do echo "waiting for ollama..."; sleep 2; done
     environment:
-      - "NEO4J_AUTH=neo4j/iesha8aeMohjahchah4v"
-      - "NEO4J_apoc_export_file_enabled=true"
-      - "NEO4J_apoc_import_file_enabled=true"
-      - "NEO4J_apoc_import_file_use__neo4j__config=true"
-      - "NEO4J_PLUGINS=[\"apoc\"]"
-    ports:
-      - "7474:7474"
-      - "7687:7687"
+      - OLLAMA_HOST=http://ollama:11434
     networks:
       - ollama-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-O", "-", "-q", "http://localhost:7474/"]
-      interval: 30s
-      timeout: 3s
-      retries: 30
-
-  neo4j-mcp:
-    build: ./neo4j-mcp
-    container_name: neo4j-mcp
-    environment:
-      - "NEO4J_URI=neo4j://neo4j:7687"
-      - "NEO4J_USERNAME=neo4j"
-      - "NEO4J_PASSWORD=iesha8aeMohjahchah4v"
-      - "NEO4J_DATABASE=neo4j"
-      - "NEO4J_READ_ONLY=false"
-      - "NEO4J_TELEMETRY=true"
-    ports:
-      - "8004:80"
-    networks:
-      - ollama-net
-    restart: unless-stopped
     depends_on:
-      neo4j:
-        condition: service_healthy
-
-    healthcheck:
-      test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-      interval: 30s
-      timeout: 3s
-      retries: 30
-
-  pyghidra-mcp:
-    build: ./pyghidra-mcp
-    container_name: pyghidra-mcp
-    ports:
-      - "8003:80"
-    networks:
-      - ollama-net
-    volumes:
-      - malware:/malware:ro
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-      interval: 30s
-      timeout: 3s
-      retries: 30
+      ollama:
+        condition: service_started
+    restart: "no"
 
   angr-mcp:
     build: ./angr-mcp
     container_name: angr-mcp
-    ports:
-      - "8005:80"
     networks:
       - ollama-net
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 30
     volumes:
       - malware:/malware:ro
 
-  triage-mcp:
-    image: quay.io/docling-project/docling-serve-cu124
-    
-
-
-
-    build: ./triage-mcp
-    container_name: triage-mcp
-    ports:
-      - "8007:80"
+  ghidra-headless-mcp:
+    build: ./ghidra-headless-mcp
+    container_name: ghidra-headless-mcp
     networks:
       - ollama-net
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 30
     volumes:
       - malware:/malware:ro
 
-  # static-malware-analyzer:
-  #   build: https://github.com/grchanduvardhan/Static-Malware-PE-and-DLL-Analyzer
-  #   container_name: static-malware-analyzer
-  #   ports:
-  #     - "8006:5000"
-  #   networks:
-  #     - ollama-net
-  #   restart: unless-stopped
-
-
-  docling:
-    image: quay.io/docling-project/docling-serve-cu124
-    container_name: docling
-    ports:
-      - "5001:5001"
+  # Cognee REST API (also serves /health and /docs). Owns the database
+  # migrations; cognee-mcp shares its storage volumes.
+  cognee:
+    image: cognee/cognee:main
+    container_name: cognee
     environment:
-      - DOCLING_SERVE_ENABLE_UI=true
+      <<: *cognee-env
+      # The browser reaches the API same-origin through the reverse proxy.
+      CORS_ALLOWED_ORIGINS: "http://cognee.localhost:${NEOCORTEX_PORT:-8080}"
+    volumes:
+      - cognee_system:/cognee-storage/system
+      - cognee_data:/cognee-storage/data
     networks:
       - ollama-net
     restart: unless-stopped
-    deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                capabilities: [gpu]
-                count: all
-
-  mitre-attack-mcp:
-    build: ./mitre-attack-mcp
-    container_name: mitre-attack-mcp
-    ports:
-      - "8008:80"
-    networks:
-      - ollama-net
-    restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 30
-
-  postgres-mcp:
-    build: ./postgres-mcp
-    container_name: postgres-mcp
-    environment:
-      - DATABASE_URI=postgresql://openwebui:openwebui_password@postgres:5432/openwebui_db
-    ports:
-      - "8009:80"
-    networks:
-      - ollama-net
-    restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-Lf", "http://localhost/openapi.json"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 30
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     depends_on:
-      postgres:
-        condition: service_started
+      ollama-model-init:
+        condition: service_completed_successfully
 
-  copilot-api:
-    build: https://github.com/ericc-ch/copilot-api.git
-    container_name: copilot-api
+  cognee-mcp:
+    image: cognee/cognee-mcp:main
+    container_name: cognee-mcp
+    command: --no-migration
+    environment:
+      <<: *cognee-env
+      TRANSPORT_MODE: http
+      HTTP_PORT: "8000"
+    volumes:
+      - cognee_system:/cognee-storage/system
+      - cognee_data:/cognee-storage/data
     networks:
       - ollama-net
     restart: unless-stopped
-    env_file:
-      - path: ./copilot.env
-        required: false
-    ports:
-      - "4141:4141"
+    depends_on:
+      cognee:
+        condition: service_healthy
 
-  filebrowser:
-    image: hurlenko/filebrowser
-    container_name: filebrowser
-    volumes:
-      - malware:/data:rw
-      - filebrowser_config:/config:rw
+  cognee-ui:
+    image: cognee/cognee-ui:latest
+    container_name: cognee-ui
     environment:
-      - FB_BASE_URL=/filebrowser
+      # Used by the browser *and* by the UI's server-side routes, so it must
+      # resolve in both places: the reverse proxy carries a network alias for
+      # cognee.localhost, and browsers resolve *.localhost to loopback.
+      COGNEE_BACKEND_URL: "http://cognee.localhost:${NEOCORTEX_PORT:-8080}"
+      DEFAULT_USER_PASSWORD: ${COGNEE_DEFAULT_USER_PASSWORD:-default_password}
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    depends_on:
+      cognee:
+        condition: service_healthy
+
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:latest
+    container_name: hindsight
+    environment:
+      HINDSIGHT_API_LLM_PROVIDER: ollama
+      HINDSIGHT_API_LLM_BASE_URL: http://ollama:11434/v1
+      HINDSIGHT_API_LLM_MODEL: qwen3.5:9b
+      # Grammar-enforce JSON output; Ollama otherwise gets the schema in the
+      # prompt only, and small/thinking models can return unparseable JSON.
+      HINDSIGHT_API_LLM_STRICT_SCHEMA: "true"
+      # Structured calls already send think=false to Ollama's native API; this
+      # covers the free-form calls (e.g. reflect), which use /v1 and only
+      # honour reasoning_effort.
+      HINDSIGHT_API_LLM_REASONING_EFFORT: none
+      # Control plane (port 9999) talks to the API (port 8888) in-container.
+      HINDSIGHT_CP_DATAPLANE_API_URL: http://localhost:8888
+    volumes:
+      - hindsight_data:/home/hindsight/.pg0
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    depends_on:
+      ollama-model-init:
+        condition: service_completed_successfully
+
+  mcp-gateway:
+    image: nginx:alpine
+    container_name: mcp-gateway
+    volumes:
+      - ./nginx/mcp-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/mcp-proxy.inc:/etc/nginx/mcp-proxy.inc:ro
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    # No host port: reached through the reverse proxy at /mcp/.
+    depends_on:
+      - angr-mcp
+      - ghidra-headless-mcp
+      - cognee-mcp
+      - hindsight
+
+  # Single entry point for every web UI and REST API, using name-based virtual
+  # hosts on *.localhost (browsers resolve these to loopback without any
+  # /etc/hosts entries). nginx listens on the same port inside and outside the
+  # container so that URLs like http://cognee.localhost:8080 work both from
+  # the host and from other containers (via the network aliases below).
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: reverse-proxy
+    environment:
+      - NEOCORTEX_PORT=${NEOCORTEX_PORT:-8080}
+    volumes:
+      - ./nginx/reverse-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/proxy-common.inc:/etc/nginx/proxy-common.inc:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    networks:
+      ollama-net:
+        aliases:
+          - cognee.localhost
+          - cognee-api.localhost
+          - hindsight.localhost
+          - hindsight-api.localhost
+          - ollama.localhost
+          - files.localhost
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "${NEOCORTEX_PORT:-8080}:${NEOCORTEX_PORT:-8080}"
 
 volumes:
-  data:
-  models:
   ollama:
-  open-webui:
   malware:
-  filebrowser_config:
+  cognee_system:
+  cognee_data:
+  hindsight_data:
 networks:
   ollama-net:
     driver: bridge

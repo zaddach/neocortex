@@ -14,9 +14,15 @@ RUN apt-get update && \
     pip install uv && \
     uv venv /app/.venv && \
     uv pip install --python /app/.venv/bin/python \
-        mcpo \
-        https://github.com/zaddach/angrMCP/archive/80af15dc5d6abcc246504852ad426e1208abd30c.zip
+        "mcp<2" \
+        https://github.com/zaddach/angrMCP/archive/80af15dc5d6abcc246504852ad426e1208abd30c.zip && \
+    uv venv /app/bridge && \
+    uv pip install --python /app/bridge/bin/python "fastmcp>=4,<5"
+
+COPY mcp_http_bridge.py /app/mcp_http_bridge.py
 
 EXPOSE 80
 USER 65532:65532
-ENTRYPOINT ["mcpo", "--port", "80", "--", "python", "-m", "angr_mcp"]
+# The bridge lives in its own venv: fastmcp 4 needs mcp 2.x, while angrMCP is
+# written against the mcp 1.x API.
+ENTRYPOINT ["/app/bridge/bin/python", "/app/mcp_http_bridge.py", "/app/.venv/bin/python", "-m", "angr_mcp"]
