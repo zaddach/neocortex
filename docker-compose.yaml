@@ -17,6 +17,15 @@ x-cognee-env: &cognee-env
   EMBEDDING_MODEL: nomic-embed-text:latest
   EMBEDDING_ENDPOINT: http://ollama:11434/api/embed
   EMBEDDING_DIMENSIONS: "768"
+  GRAPH_DATABASE_PROVIDER: neo4j
+  GRAPH_DATABASE_URL: bolt://neo4j:7687
+  GRAPH_DATABASE_NAME: neo4j
+  GRAPH_DATABASE_USERNAME: neo4j
+  GRAPH_DATABASE_PASSWORD: ${NEO4J_PASSWORD:-neocortex-neo4j}
+  # Neo4j Community has a single database, but cognee's multi-user mode wants
+  # one graph database per dataset (Enterprise/Aura only). Run single-user:
+  # all datasets share the one graph.
+  ENABLE_BACKEND_ACCESS_CONTROL: "false"
 
 services:
   ollama:
@@ -88,6 +97,29 @@ services:
     volumes:
       - malware:/malware:ro
 
+  # Graph database for cognee. The browser UI is exposed at neo4j.localhost; it
+  # speaks Bolt over WebSocket, which the reverse proxy routes to port 7687.
+  neo4j:
+    image: neo4j:5.26  # 5.x: matches the neo4j Python driver cognee ships
+    container_name: neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-neocortex-neo4j}
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      # What the browser is told to connect to (the reverse proxy), not the
+      # in-network address cognee uses.
+      NEO4J_server_bolt_advertised__address: neo4j.localhost:${NEOCORTEX_PORT:-8080}
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - ollama-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7474/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
   # Cognee REST API (also serves /health and /docs). Owns the database
   # migrations; cognee-mcp shares its storage volumes.
   cognee:
@@ -112,6 +144,8 @@ services:
     depends_on:
       ollama-model-init:
         condition: service_completed_successfully
+      neo4j:
+        condition: service_healthy
 
   cognee-mcp:
     image: cognee/cognee-mcp:main
@@ -221,6 +255,7 @@ volumes:
   cognee_system:
   cognee_data:
   hindsight_data:
+  neo4j_data:
 networks:
   ollama-net:
     driver: bridge

@@ -6,6 +6,13 @@ map $http_upgrade $connection_upgrade {
     ''      '';
 }
 
+# Neo4j serves its browser over HTTP (7474) but the browser then opens a Bolt
+# WebSocket to the advertised address, which is this same port.
+map $http_upgrade $neo4j_upstream {
+    default      neo4j:7474;
+    ~*^websocket$ neo4j:7687;
+}
+
 # Docker's embedded DNS. Upstreams are referenced through variables so nginx
 # resolves them per request and starts even when some services are down.
 resolver 127.0.0.11 valid=10s ipv6=off;
@@ -114,6 +121,18 @@ server {
 
     location / {
         set $upstream hindsight:8888;
+        proxy_pass http://$upstream;
+        include /etc/nginx/proxy-common.inc;
+    }
+}
+
+# Neo4j browser and its Bolt WebSocket.
+server {
+    listen ${NEOCORTEX_PORT};
+    server_name neo4j.localhost;
+
+    location / {
+        set $upstream $neo4j_upstream;
         proxy_pass http://$upstream;
         include /etc/nginx/proxy-common.inc;
     }

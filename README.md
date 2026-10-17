@@ -6,7 +6,7 @@ A set of dockerized MCP servers for reverse engineering and vulnerability discov
 
 - **angr-mcp** — binary analysis / symbolic execution via [angr](https://github.com/zaddach/angrMCP).
 - **ghidra-headless-mcp** — headless Ghidra analysis via [mrphrazer/ghidra-headless-mcp](https://github.com/mrphrazer/ghidra-headless-mcp). Runs on a Kali base image that packages Ghidra; `GHIDRA_INSTALL_DIR` is assumed to be `/usr/share/ghidra` (Kali's packaging convention) — verify with `docker compose run ghidra-headless-mcp ls /usr/share/ghidra` if analysis fails to start.
-- **cognee-mcp** — knowledge-graph memory for analysis findings, via the official [cognee-mcp](https://github.com/topoteretes/cognee) image, using the local Ollama instance for both LLM and embeddings (no external API key needed). It shares its storage volumes with the `cognee` REST API server, so memories added over MCP show up in the `cognee-ui` web UI and vice versa.
+- **cognee-mcp** — knowledge-graph memory for analysis findings, via the official [cognee-mcp](https://github.com/topoteretes/cognee) image, using the local Ollama instance for both LLM and embeddings (no external API key needed). It shares its storage volumes with the `cognee` REST API server, so memories added over MCP show up in the `cognee-ui` web UI and vice versa. Cognee's graph lives in a `neo4j` container (Community edition, so cognee runs in single-user mode with `ENABLE_BACKEND_ACCESS_CONTROL=false`: all datasets share one graph). Set `NEO4J_PASSWORD` to change the default password; do so before the first start, as Neo4j only reads it when it creates its data volume.
 - **hindsight** — agent memory (retain / recall / reflect) from [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight), using Ollama for the LLM and its built-in local embedding model. The one container runs the API, the MCP server and a web control plane, with an embedded Postgres in the `hindsight_data` volume.
 
 Each of these speaks native MCP over streamable HTTP. An nginx gateway (`mcp-gateway`) fronts all of them, and the reverse proxy below publishes it under `/mcp/` on port **8080**, so the Claude CLI can reach them without joining the Docker network:
@@ -29,6 +29,7 @@ A second nginx, `reverse-proxy`, exposes every web frontend and REST API on one 
 | `http://cognee-api.localhost:8080/docs` | cognee REST API |
 | `http://hindsight.localhost:8080` | hindsight control plane |
 | `http://hindsight-api.localhost:8080/docs` | hindsight REST API |
+| `http://neo4j.localhost:8080` | Neo4j browser for cognee's graph (log in as `neo4j` with `NEO4J_PASSWORD`, default `neocortex-neo4j`; connect to `neo4j.localhost:8080`) |
 | `http://ollama.localhost:8080` | Ollama API |
 | `http://localhost:8080/mcp/` | the MCP servers listed above |
 
