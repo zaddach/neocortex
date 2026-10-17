@@ -1,0 +1,2 @@
+# Keep LF everywhere: these files run in Linux containers or are executed as scripts.
+* text=auto eol=lf
