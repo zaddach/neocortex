@@ -47,6 +47,17 @@ brings up `ollama`, the MCP servers, the web UIs, the `mcp-gateway` and the `rev
 
 The project ships a `.mcp.json` pointing at the gateway paths above (`http://localhost:8080/mcp/...`, with hindsight on the `neocortex` bank), so running `claude` from this repo picks up all four MCP servers automatically — confirm with `claude mcp list`. Samples placed in the `malware` Docker volume (browsable/uploadable via the file browser at <http://localhost:8080/filebrowser/>) are visible to `angr-mcp` and `ghidra-headless-mcp` at `/malware`.
 
+## Backup and restore
+
+```sh
+scripts/backup.sh            # -> backups/neocortex-<timestamp>/
+scripts/restore.sh backups/neocortex-<timestamp> [volume ...]
+```
+
+`backup.sh` archives every Docker volume of the project (cognee, neo4j, hindsight, the `malware` samples, ...) into one `.tar.gz` per volume with a `SHA256SUMS` file. It stops the running containers while it works, since neo4j, hindsight's embedded Postgres and cognee's SQLite are not safe to copy live, and starts them again afterwards. `--hot` skips the stop (the databases may then be inconsistent). The downloaded Ollama models are skipped because they can be re-pulled; add `--include-ollama` to keep them. The archives contain database contents and credentials, so they are created readable by you only, and `backups/` is git-ignored.
+
+`restore.sh` verifies the checksums, **replaces** the contents of the named volumes (all of them by default) after confirmation, and restarts what it stopped.
+
 ## Resources
 - https://osintteam.blog/mcp-as-your-malware-analysis-assistant-75c177b2788f
 - [FatalSec: Build an AI-Powered Reverse Engineering Lab with Ghidra](https://www.youtube.com/watch?v=WOsVlzEXxJk&pp=ygUKZ2hpZHJhIG1jcA%3D%3D)
