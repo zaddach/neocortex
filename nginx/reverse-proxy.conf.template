@@ -20,8 +20,7 @@ resolver 127.0.0.11 valid=10s ipv6=off;
 # Uploads (samples, documents) can be large.
 client_max_body_size 0;
 
-# Landing page with links to everything below, plus the file browser, which
-# is built to live under /filebrowser.
+# Landing page with links to everything below, plus sample uploads.
 server {
     listen ${NEOCORTEX_PORT} default_server;
     server_name localhost;
@@ -32,8 +31,9 @@ server {
         try_files $uri $uri/ =404;
     }
 
-    location /filebrowser/ {
-        set $upstream filebrowser:8080;
+    location /samples/ {
+        set $upstream sample-drop:80;
+        rewrite ^/samples/(.*)$ /$1 break;
         proxy_pass http://$upstream;
         include /etc/nginx/proxy-common.inc;
     }
@@ -54,11 +54,12 @@ server {
     server_name files.localhost;
 
     location = / {
-        return 302 /filebrowser/;
+        return 302 /samples/;
     }
 
-    location /filebrowser/ {
-        set $upstream filebrowser:8080;
+    location /samples/ {
+        set $upstream sample-drop:80;
+        rewrite ^/samples/(.*)$ /$1 break;
         proxy_pass http://$upstream;
         include /etc/nginx/proxy-common.inc;
     }

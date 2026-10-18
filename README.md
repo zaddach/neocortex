@@ -24,7 +24,7 @@ A second nginx, `reverse-proxy`, exposes every web frontend and REST API on one 
 
 | URL | Backend |
 |---|---|
-| `http://localhost:8080/filebrowser/` (also `files.localhost`) | filebrowser, for the `malware` volume |
+| `http://localhost:8080/samples/` (also `files.localhost`) | sample listing and upload endpoint for the `malware` volume |
 | `http://cognee.localhost:8080` | cognee-ui, plus the cognee API under `/api/v1/` on the same origin |
 | `http://cognee-api.localhost:8080/docs` | cognee REST API |
 | `http://hindsight.localhost:8080` | hindsight control plane |
@@ -45,7 +45,7 @@ brings up `ollama`, the MCP servers, the web UIs, the `mcp-gateway` and the `rev
 
 ## Claude CLI
 
-The project ships a `.mcp.json` pointing at the gateway paths above (`http://localhost:8080/mcp/...`, with hindsight on the `neocortex` bank), so running `claude` from this repo picks up all four MCP servers automatically — confirm with `claude mcp list`. Samples placed in the `malware` Docker volume (browsable/uploadable via the file browser at <http://localhost:8080/filebrowser/>) are visible to `angr-mcp` and `ghidra-headless-mcp` at `/malware`.
+The project ships a `.mcp.json` pointing at the gateway paths above (`http://localhost:8080/mcp/...`, with hindsight on the `neocortex` bank), so running `claude` from this repo picks up all four MCP servers automatically — confirm with `claude mcp list`. Samples in the `malware` Docker volume are visible to `angr-mcp` and `ghidra-headless-mcp` at `/malware` (read-only). Submit them with `scripts/submit.sh [-d subdir] [-f] FILE...` (or `curl -T FILE http://localhost:8080/samples/NAME`); it prints the in-container path to hand to the tools. The `sample-drop` container is the only writer of the volume; `http://localhost:8080/samples/` lists its contents and `curl -X DELETE` on a file URL removes it.
 
 ## Backup and restore
 

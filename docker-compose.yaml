@@ -97,6 +97,18 @@ services:
     volumes:
       - malware:/malware:ro
 
+  # Upload endpoint for samples: the only writer of the malware volume. Use
+  # scripts/submit.sh, or PUT to http://localhost:8080/samples/<name>.
+  sample-drop:
+    image: nginx:alpine
+    container_name: sample-drop
+    volumes:
+      - ./nginx/sample-drop.conf:/etc/nginx/conf.d/default.conf:ro
+      - malware:/data
+    networks:
+      - ollama-net
+    restart: unless-stopped
+
   # Graph database for cognee. The browser UI is exposed at neo4j.localhost; it
   # speaks Bolt over WebSocket, which the reverse proxy routes to port 7687.
   neo4j:
